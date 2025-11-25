@@ -1,19 +1,27 @@
-# cloud_functions/heartbeat_handler/main.py
 import base64
 import json
 import geohash2
-from google.cloud import firestore
+import redis
+import os
 
-# Firestore 設定：專門存即時心跳
-REALTIME_DB = "real-time-match"
-COLLECTION_NAME = "user_status"
+# 讀取環境變數（部署時在 Cloud Function 設定）
+REDIS_HOST = os.getenv("REDIS_HOST")      # e.g. "10.0.0.3"（MemoryStore 內部 IP）
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")  # Secret Manager 拉進來
+
+# Redis client
+redis_client = redis.StrictRedis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    password=REDIS_PASSWORD,
+    decode_responses=True,
+)
 
 
 def heartbeat_handler(event, context):
-    """Triggered by Pub/Sub heartbeat message."""
+    """Triggered by Pub/Sub heartbeat message, store in Redis."""
     print("Heartbeat Function triggered")
 
-    # ========== 1. Decode Pub/Sub message ==========
     if "data" not in event:
         print("No data found in event")
         return
@@ -27,44 +35,42 @@ def heartbeat_handler(event, context):
 
     print("Received heartbeat:", data)
 
-    # ========== 2. Validate essential fields ==========
     user_id = data.get("user_id")
     lat = data.get("lat")
     lng = data.get("lng")
 
-    if not user_id:
-        print("Missing user_id")
+    if not user_id or lat is None or lng is None:
+        print("Missing field(s)")
         return
 
-    if lat is None or lng is None:
-        print(f"Missing location for user {user_id}")
-        return
-
-    # ========== 3. Compute geohash ==========
+    # --------- Compute geohash ---------
     geo_hash = geohash2.encode(lat, lng, precision=8)
 
-    # ========== 4. Write to Firestore ==========
+    # --------- Redis key ---------
+    key = f"user:{user_id}"
+
+    # --------- Write into Redis (Hash) ---------
+    heartbeat = {
+        "user_id": user_id,
+        "track_id": data.get("track_id"),
+        "track_name": data.get("track_name"),
+        "artist_id": data.get("artist_id"),
+        "artist_name": data.get("artist_name"),
+        "popularity": data.get("popularity"),
+        "timestamp": str(data.get("timestamp")),
+        "album_image": data.get("album_image"),
+        "lat": str(lat),
+        "lng": str(lng),
+        "geohash": geo_hash,
+    }
+
     try:
-        db = firestore.Client(database=REALTIME_DB)
-        doc_ref = db.collection(COLLECTION_NAME).document(user_id)
+        redis_client.hset(key, mapping=heartbeat)
+        # 設定 TTL（例如 120 秒），避免舊資料殘留
+        redis_client.expire(key, 120)
 
-        doc_ref.set(
-            {
-                "user_id": user_id,
-                "track_id": data.get("track_id"),
-                "track_name": data.get("track_name"),
-                "artist_id": data.get("artist_id"),
-                "artist_name": data.get("artist_name"),
-                "popularity": data.get("popularity"),
-                "timestamp": data.get("timestamp"),
-                "album_image": data.get("album_image"),
-                "location": firestore.GeoPoint(lat, lng),
-                "geohash": geo_hash,
-            }
-        )
-
-        print(f"Firestore updated for user: {user_id}")
+        print(f"Redis updated for {user_id}")
 
     except Exception as e:
-        print("Firestore write error:", e)
+        print("Redis write error:", e)
         return

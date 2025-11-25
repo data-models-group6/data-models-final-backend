@@ -14,7 +14,15 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 
-if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
-    print(".env 讀取失敗，請檢查變數名稱與格式")
-else:
-    print(".env 讀取成功")
+# === JWT ===
+JWT_SECRET = os.getenv("JWT_SECRET", "CHANGEME")  # 給預設但正式版要改
+
+# === Redis ===
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+
+print("CLIENT_ID Loaded:", CLIENT_ID is not None)
+print("REDIRECT_URI Loaded:", REDIRECT_URI is not None)
+print("JWT_SECRET Loaded:", JWT_SECRET is not None)
+print("REDIS_HOST Loaded:", REDIS_HOST)
+print("REDIS_PORT Loaded:", REDIS_PORT)

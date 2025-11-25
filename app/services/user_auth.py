@@ -1,58 +1,41 @@
-# # app/services/user_auth.py
-# import firebase_admin
-# from firebase_admin import auth, credentials
-# from fastapi import HTTPException, Header
+# app/services/user_auth.py
+import jwt
+from fastapi import HTTPException, Header
+from google.cloud import firestore
+from app.config.settings import JWT_SECRET
 
-# ======= 測試版本：完全不使用 Firebase ========
+JWT_ALGORITHM = "HS256"
 
-def get_current_user():
+def get_current_user(authorization: str = Header(None)):
     """
-    測試期間：永遠回傳固定 user_id
-    未來要接登入系統（PostgreSQL / Firebase）再改。
+    從 Authorization: Bearer <JWT token> 解析 user_id
+    然後在 Firestore (default) 讀取該 user's 資料
     """
-    return {
-        "user_id": "test_user_001"
-    }
-# # =============================================
-# # 1. 初始化 Firebase Admin
-# # =============================================
-# try:
-#     firebase_admin.get_app()
-# except ValueError:
-#     cred = credentials.Certificate("credentials/firebase-adminsdk.json")
-#     firebase_admin.initialize_app(cred)
 
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
 
-# # =============================================
-# # 2. 從 Authorization Bearer Token 解析 Firebase User
-# # =============================================
-# def get_current_user(authorization: str = Header(None)):
-#     """
-#     從 header: Authorization: Bearer <id_token>
-#     解出 Firebase 使用者資料。
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token format")
 
-#     回傳:
-#     {
-#         "user_id": "<firebase_uid>",
-#         "email": "...",
-#         "name": "..."
-#     }
-#     """
+    token = authorization.split(" ")[1]
 
-#     if not authorization:
-#         raise HTTPException(status_code=401, detail="Missing Authorization header")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-#     if not authorization.startswith("Bearer "):
-#         raise HTTPException(status_code=401, detail="Invalid Authorization header")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
 
-#     id_token = authorization.split(" ")[1]
+    # 🔥 改成使用 (default) Firestore
+    db = firestore.Client(database="(default)")
+    doc = db.collection("users").document(user_id).get()
 
-#     try:
-#         decoded = auth.verify_id_token(id_token)
-#         return {
-#             "user_id": decoded["uid"],
-#             "email": decoded.get("email"),
-#             "name": decoded.get("name"),
-#         }
-#     except Exception:
-#         raise HTTPException(status_code=401, detail="Invalid Firebase ID token")
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    data = doc.to_dict()
+    data["user_id"] = user_id
+    return data

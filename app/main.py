@@ -1,18 +1,39 @@
 # app/main.py
 from fastapi import FastAPI
-from app.api.heartbeat import router as heartbeat_router
+
+# === Import Routers ===
+from app.api.auth_api import router as auth_router            # NEW: Email/Password + JWT
 from app.api.spotify_auth_api import router as spotify_router
-from app.api.match_api import router as match_router
+from app.api.heartbeat import router as heartbeat_router
+from app.api.match_api import router as match_router          # Redis Matching
 
-app = FastAPI()
+app = FastAPI(
+    title="Spotify Match Backend",
+    description=(
+        "Backend for: "
+        "• User Login (JWT) "
+        "• Spotify OAuth (PKCE) "
+        "• Heartbeat → Pub/Sub → Redis "
+        "• Geo + Music Matching"
+    ),
+    version="2.0.0"
+)
 
-# Spotify 登入 / callback
-app.include_router(spotify_router, prefix="/auth")
-# 心跳相關
-app.include_router(heartbeat_router, prefix="/api")
-# 地理配對 API
-app.include_router(match_router, prefix="/api")
+# === User Auth (JWT 登入 / 註冊) ===
+app.include_router(auth_router, prefix="/auth", tags=["User Auth"])
+
+# === Spotify OAuth（PKCE Flow） ===
+app.include_router(spotify_router, prefix="/spotify", tags=["Spotify OAuth"])
+
+# === 心跳資料 API ===
+app.include_router(heartbeat_router, prefix="/api", tags=["Heartbeat"])
+
+# === Redis 配對 API ===
+app.include_router(match_router, prefix="/api", tags=["Matching"])
 
 @app.get("/")
 def root():
-    return {"message": "Spotify backend running"}
+    return {
+        "status": "ok",
+        "message": "Spotify Match Backend running with JWT + PKCE + Firestore + Redis v2"
+    }
