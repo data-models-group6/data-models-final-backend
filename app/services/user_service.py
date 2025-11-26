@@ -1,10 +1,30 @@
 # app/services/user_service.py
 from google.cloud import firestore
+from google.oauth2 import service_account
 from datetime import datetime
 import uuid
+import base64
+import json
+import os
 
 def get_db():
-    return firestore.Client()
+    global _cached_db
+
+    if _cached_db is not None:
+        return _cached_db
+
+    raw = os.getenv("GOOGLE_CLOUD_CREDENTIALS")
+    if not raw:
+        raise Exception("GOOGLE_CLOUD_CREDENTIALS missing")
+
+    try:
+        creds_json = json.loads(base64.b64decode(raw))
+        creds = service_account.Credentials.from_service_account_info(creds_json)
+    except Exception as e:
+        raise Exception(f"Failed to decode GOOGLE_CLOUD_CREDENTIALS: {e}")
+
+    _cached_db = firestore.Client(credentials=creds, project=creds.project_id)
+    return _cached_db
 
 
 def create_user(email: str, password_hash: str):
