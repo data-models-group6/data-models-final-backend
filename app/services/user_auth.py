@@ -29,8 +29,9 @@ def get_current_user(authorization: str = Header(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    # 🔥 改成使用 (default) Firestore
-    db = firestore.Client(database="(default)")
+    def get_db():
+        return firestore.Client()
+    db = get_db()
     doc = db.collection("users").document(user_id).get()
 
     if not doc.exists:
