@@ -3,10 +3,9 @@ import requests
 from typing import Optional, Dict
 from google.cloud import firestore
 from app.config.settings import CLIENT_ID
+from app.services.firestore_client import get_db
 
-# Lazy load Firestore client
-def get_db():
-    return firestore.Client()
+
 
 def save_spotify_token(user_id: str, token_data: Dict):
     db = get_db()

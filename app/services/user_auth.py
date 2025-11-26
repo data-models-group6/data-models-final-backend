@@ -3,6 +3,7 @@ import jwt
 from fastapi import HTTPException, Header
 from google.cloud import firestore
 from app.config.settings import JWT_SECRET
+from app.services.firestore_client import get_db
 
 JWT_ALGORITHM = "HS256"
 
@@ -29,8 +30,6 @@ def get_current_user(authorization: str = Header(None)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    def get_db():
-        return firestore.Client()
     db = get_db()
     doc = db.collection("users").document(user_id).get()
 
