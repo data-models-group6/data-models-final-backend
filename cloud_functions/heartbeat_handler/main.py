@@ -17,6 +17,21 @@ redis_client = redis.StrictRedis(
     decode_responses=True,
 )
 
+def get_redis():
+    """
+    Lazy load Redis client.
+    避免在 cold start / import 階段初始化 Redis client。
+    """
+    REDIS_HOST = os.getenv("REDIS_HOST")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+
+    return redis.StrictRedis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        password=REDIS_PASSWORD,
+        decode_responses=True,
+    )
 
 def heartbeat_handler(event, context):
     """Triggered by Pub/Sub heartbeat message, store in Redis."""
@@ -65,6 +80,7 @@ def heartbeat_handler(event, context):
     }
 
     try:
+        redis_client = get_redis()
         redis_client.hset(key, mapping=heartbeat)
         # 設定 TTL（例如 120 秒），避免舊資料殘留
         redis_client.expire(key, 120)

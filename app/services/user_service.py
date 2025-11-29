@@ -1,9 +1,7 @@
 # app/services/user_service.py
-from google.cloud import firestore
 from datetime import datetime
 import uuid
-
-DB = firestore.Client(database="(default)")
+from app.services.firestore_client import get_db
 
 
 def create_user(email: str, password_hash: str):
@@ -20,17 +18,19 @@ def create_user(email: str, password_hash: str):
         "display_name": None,
         "preferences": {},
     }
-
-    DB.collection("users").document(user_id).set(data)
+    db = get_db()
+    db.collection("users").document(user_id).set(data)
     return user_id
 
 
 def get_user(user_id: str):
-    doc = DB.collection("users").document(user_id).get()
+    db = get_db()
+    doc = db.collection("users").document(user_id).get()
     return doc.to_dict() if doc.exists else None
 
 def get_user_by_email(email: str):
-    q = DB.collection("users").where("email", "==", email).stream()
+    db = get_db()
+    q = db.collection("users").where("email", "==", email).stream()
     for doc in q:
         data = doc.to_dict()
         data["user_id"] = doc.id
@@ -39,6 +39,7 @@ def get_user_by_email(email: str):
 
 
 def update_avatar(user_id: str, avatar_url: str):
-    DB.collection("users").document(user_id).update({
+    db = get_db()
+    db.collection("users").document(user_id).update({
         "avatar_url": avatar_url
     })

@@ -21,6 +21,7 @@ def get_publisher():
         project_id = (
             os.getenv("GCP_PROJECT")
             or os.getenv("GOOGLE_CLOUD_PROJECT")
+            or os.getenv("PUBSUB_PROJECT_ID")
             or "spotify-match-project"
         )
         _publisher = pubsub_v1.PublisherClient()
@@ -35,8 +36,13 @@ def publish_heartbeat(data: dict):
     """
     message = json.dumps(data).encode("utf-8")
 
-    publisher, topic_path = get_publisher()
-    future = publisher.publish(topic_path, message)
-    future.result()  # 確保送出成功（之後要壓效能可以拿掉）
+    try:
+        publisher, topic_path = get_publisher()
+        future = publisher.publish(topic_path, message)
+        future.result()
+        return True
 
-    return True
+    except Exception as e:
+        # 不要讓 Render Crash，應該回傳 False
+        print("Pub/Sub publish error:", e)
+        return False
