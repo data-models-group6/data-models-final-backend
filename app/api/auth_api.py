@@ -8,7 +8,7 @@ from app.models.auth_models import (
     LoginRequest, LoginResponse
 )
 
-router = APIRouter(tags=["Auth"])
+router = APIRouter()
 
 
 @router.post(
