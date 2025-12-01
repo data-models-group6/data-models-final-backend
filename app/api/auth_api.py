@@ -3,15 +3,21 @@ from fastapi import APIRouter, HTTPException
 from app.services.user_service import create_user, get_user_by_email
 from app.services.jwt_service import create_jwt_token
 import hashlib
+from app.models.auth_models import (
+    RegisterRequest, RegisterResponse,
+    LoginRequest, LoginResponse
+)
 
-router = APIRouter()
+router = APIRouter(tags=["Auth"])
 
 
-@router.post("/register")
+@router.post(
+    "/register",
+    summary="註冊帳號",
+    description="建立 email/password 使用者，儲存於 Firestore。",
+    response_model=RegisterResponse
+)
 def register(payload: dict):
-    """
-    註冊：建立 email/password → Firestore users collection
-    """
     email = payload.get("email")
     password = payload.get("password")
 
@@ -37,11 +43,14 @@ def register(payload: dict):
     }
 
 
-@router.post("/login")
+
+@router.post(
+    "/login",
+    summary="登入帳號",
+    description="驗證 email/password，成功後產生 JWT Token。",
+    response_model=LoginResponse
+)
 def login(payload: dict):
-    """
-    登入：email/password → JWT Token
-    """
     email = payload.get("email")
     password = payload.get("password")
 
