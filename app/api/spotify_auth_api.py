@@ -4,11 +4,16 @@ import hashlib
 import os
 import time
 import requests
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import RedirectResponse
 from app.config.settings import CLIENT_ID, REDIRECT_URI
 from app.services.spotify_token_service import save_spotify_token
 from app.services.user_auth import get_current_user
+from app.models.spotify_auth_models import (
+    AuthLoginResponse,
+    SpotifyCallbackQuery,
+    SpotifyCallbackResponse
+)
 
 router = APIRouter()
 
@@ -23,7 +28,15 @@ def generate_pkce_pair():
     return code_verifier, code_challenge
 
 
-@router.get("/login")
+@router.get(
+    "/login",
+    summary="Spotify Login — 建立 OAuth URL",
+    description=(
+        "使用 PKCE Flow 建立 Spotify 授權登入連結，"
+        "前端應 redirect 使用者至該 URL 以進行 Spotify OAuth 授權。"
+    ),
+    response_model=AuthLoginResponse,
+)
 def login(user=Depends(get_current_user)):
     user_id = user["user_id"]
 
@@ -46,8 +59,19 @@ def login(user=Depends(get_current_user)):
     return RedirectResponse(url)
 
 
-@router.get("/callback")
-def callback(code: str, state: str):
+@router.get(
+    "/callback",
+    summary="Spotify OAuth Callback",
+    description=(
+        "Spotify 授權完成後會 redirect 到此 endpoint，"
+        "並附上 code/state。後端再用 code + code_verifier 交換 access_token。"
+    ),
+    response_model=SpotifyCallbackResponse,
+)
+def callback(
+    code: str = Query(..., description="Spotify 回傳的授權 code"),
+    state: str = Query(..., description="我們原本傳出去的 user_id"),
+):
     user_id = state
 
     if user_id not in PKCE_STORE:
