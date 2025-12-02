@@ -6,6 +6,7 @@ from app.api.auth_api import router as auth_router            # NEW: Email/Passw
 from app.api.spotify_auth_api import router as spotify_router
 from app.api.heartbeat import router as heartbeat_router
 from app.api.match_api import router as match_router          # Redis Matching
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Spotify Match Backend",
@@ -17,6 +18,20 @@ app = FastAPI(
         "• Geo + Music Matching"
     ),
     version="2.0.0"
+)
+
+# === CORS Middleware ===
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "*" # 開發階段為了確保能動，可以先允許所有來源
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,       # 前端網址（目前先允許全部）
+    allow_credentials=True,
+    allow_methods=["*"],       # ⭐ 修正 OPTIONS 405 的關鍵
+    allow_headers=["*"],
 )
 
 # === User Auth (JWT 登入 / 註冊) ===
