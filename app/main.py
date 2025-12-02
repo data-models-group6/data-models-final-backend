@@ -30,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,       # 前端網址（目前先允許全部）
     allow_credentials=True,
-    allow_methods=["*"],       # ⭐ 修正 OPTIONS 405 的關鍵
+    allow_methods=["*"],       # 修正 OPTIONS 405 的關鍵
     allow_headers=["*"],
 )
 
