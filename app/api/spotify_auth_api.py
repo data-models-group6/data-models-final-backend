@@ -98,4 +98,4 @@ def callback(
 
     save_spotify_token(user_id, token_data)
 
-    return {"status": "success"}
+    return RedirectResponse(url="http://localhost:5173/authorization/location")
