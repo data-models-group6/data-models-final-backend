@@ -7,7 +7,7 @@ from app.services.firestore_client import get_db
 
 JWT_ALGORITHM = "HS256"
 
-def get_current_user(authorization: str = Header(None)):
+def get_current_user(authorization: str = Header(None, alias="Authorization")):
     """
     從 Authorization: Bearer <JWT token> 解析 user_id
     然後在 Firestore (default) 讀取該 user's 資料
