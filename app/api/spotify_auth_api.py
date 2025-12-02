@@ -95,6 +95,7 @@ def callback(
         raise HTTPException(status_code=400, detail=token_data)
 
     token_data["expires_at"] = int(time.time()) + token_data["expires_in"]
+    
 
     save_spotify_token(user_id, token_data)
 
