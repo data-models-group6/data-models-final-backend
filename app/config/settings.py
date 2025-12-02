@@ -23,6 +23,8 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 
+GCP_BUCKET_NAME = os.getenv("GCP_BUCKET_NAME", "spotify-match-avatars")
+
 # === JWT ===
 JWT_SECRET = os.getenv("JWT_SECRET")  # 不給預設，正式環境不允許預設
 if not JWT_SECRET:
