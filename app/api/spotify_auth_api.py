@@ -56,7 +56,7 @@ def login(user=Depends(get_current_user)):
         f"&state={user_id}"
     )
 
-    return RedirectResponse(url)
+    return {"authorization_url": url}
 
 
 @router.get(
