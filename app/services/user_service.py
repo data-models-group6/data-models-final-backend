@@ -11,12 +11,16 @@ def create_user(email: str, password_hash: str):
     user_id = str(uuid.uuid4())
 
     data = {
-        "email": email,
-        "password_hash": password_hash,
+        "email": data["email"],
+        "password_hash": data["password_hash"],
         "created_at": datetime.utcnow(),
         "avatar_url": None,
         "display_name": None,
         "preferences": {},
+        "first_name": data["first_name"],
+        "last_name": data["last_name"],
+        "birthday": data["birthday"],
+        "gender": data.get("gender"),
     }
     db = get_db()
     db.collection("users").document(user_id).set(data)
@@ -42,4 +46,18 @@ def update_avatar(user_id: str, avatar_url: str):
     db = get_db()
     db.collection("users").document(user_id).update({
         "avatar_url": avatar_url
+    })
+
+from app.services.firestore_client import get_db
+
+def update_gender(user_id: str, gender: str):
+    db = get_db()
+    db.collection("users").document(user_id).update({
+        "gender": gender
+    })
+
+def update_display_name(user_id: str, name: str):
+    db = get_db()
+    db.collection("users").document(user_id).update({
+        "display_name": name
     })
