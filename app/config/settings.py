@@ -29,6 +29,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 # BigQuery
 BQ_PROJECT = os.getenv("GCP_PROJECT_ID", "spotify-match-project")
 BQ_DATASET = os.getenv("BQ_DATASET", "user_event")
+GCP_BUCKET_NAME = os.getenv("GCP_BUCKET_NAME", "spotify-match-avatars")
 
 # Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
