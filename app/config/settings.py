@@ -37,3 +37,5 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 # === GCP ===
 BQ_PROJECT = os.getenv("GCP_PROJECT_ID", "spotify-match-project")
 BQ_DATASET = os.getenv("BQ_DATASET", "user_event")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
