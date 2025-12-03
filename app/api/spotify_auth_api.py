@@ -43,7 +43,13 @@ def login(user=Depends(get_current_user)):
     code_verifier, code_challenge = generate_pkce_pair()
     PKCE_STORE[user_id] = code_verifier
 
-    scope = "user-read-currently-playing user-top-read"
+    scope = (
+    "user-read-currently-playing "
+    "user-top-read "
+    "user-library-read "
+    "playlist-read-private "
+    "playlist-read-collaborative"
+)
 
     url = (
         "https://accounts.spotify.com/authorize"
