@@ -6,6 +6,7 @@ from app.api.auth_api import router as auth_router            # NEW: Email/Passw
 from app.api.spotify_auth_api import router as spotify_router
 from app.api.heartbeat import router as heartbeat_router
 from app.api.match_api import router as match_router          # Redis Matching
+from app.api.spotify_test_api import router as spotify_test_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -45,6 +46,8 @@ app.include_router(heartbeat_router, prefix="/api", tags=["Heartbeat"])
 
 # === Redis 配對 API ===
 app.include_router(match_router, prefix="/api", tags=["Matching"])
+
+app.include_router(spotify_test_router, prefix="/api")
 
 @app.get("/")
 def root():
