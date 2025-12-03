@@ -89,7 +89,7 @@ def fetch_and_store_top_tracks(user_id: str) -> None:
                 "created_at": now,
             })
 
-    insert_rows_json("user_top_songs", rows)
+    insert_rows_json("user_top_tracks", rows)
 
 # --------- Top Artists ---------
 def fetch_and_store_top_artists(user_id: str) -> None:
