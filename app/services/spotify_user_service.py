@@ -13,8 +13,8 @@ from app.services.bigquery_client import insert_rows_json
 SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 
 # --------- 小工具 ---------
-def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 def _parse_iso_ts(ts: str) -> datetime:
     if ts.endswith("Z"):
@@ -142,7 +142,7 @@ def fetch_and_store_favorite_tracks(user_id: str) -> None:
 
         for item in items:
             track = item["track"]
-            added_at = _parse_iso_ts(item["added_at"])
+            added_at = _parse_iso_ts(item["added_at"]).isoformat().replace("+00:00", "Z")
             artist = track["artists"][0]
             images = track["album"]["images"]
             album_image = images[0]["url"] if images else None
