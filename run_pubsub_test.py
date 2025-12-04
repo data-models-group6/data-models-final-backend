@@ -6,7 +6,7 @@ import os
 # 假設 heartbeat_pubsub.py 位於 app/services/
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'app/services')))
 
-from heartbeat_pubsub import publish_heartbeat
+from app.services.heartbeat_pubsub import publish_heartbeat
 
 # 模擬前端傳入的歌曲資料
 TEST_DATA = {
@@ -26,7 +26,7 @@ print("--- Start Pub/Sub Test from VS Code ---")
 success = publish_heartbeat(TEST_DATA)
 
 if success:
-    print(f"✅ Message published successfully! User: {TEST_DATA['user_id']}")
+    print(f"Message published successfully! User: {TEST_DATA['user_id']}")
     print("請回到 Cloud Shell 檢查 Cloud Functions 日誌。")
 else:
-    print("❌ Message publish FAILED. Check local terminal output for errors.")
+    print("Message publish FAILED. Check local terminal output for errors.")
