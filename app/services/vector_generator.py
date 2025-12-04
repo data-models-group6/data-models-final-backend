@@ -106,6 +106,10 @@ For EACH song below, output a JSON object with:
 - "track_id": the Spotify track ID
 - "track_name": the track name (as given)
 - "artist_name": the artist name (as given)
+- "primary_language": one main language
+- "languages": 1–3 languages from the allowed list
+- "genres": 2–3 genres from the fixed genre list
+- "style_vector": the 8-dimensional vector (floats 0–1)
 
 ===============================
 LANGUAGE CLASSIFICATION RULES
@@ -129,7 +133,10 @@ For each song:
 - Genres MUST come ONLY from this list:
 
 pop, rock, hip-hop, r&b, k-pop, c-pop, j-pop, edm, indie,
-acoustic, lo-fi, metal, classical, jazz, soundtrack
+acoustic, lo-fi, metal, classical, jazz, soundtrack,
+melodic-rap, trap-rap, boom-bap, drill
+
+Choose genres that best represent their discography.
 ===============================
 STYLE VECTOR (8 DIMENSIONS)
 ===============================
@@ -207,32 +214,102 @@ def build_artist_prompt(df):
 
     return f"""
 You are a professional music curator and embedding designer.
-Your task is to assign a stable 5-dimensional numeric vector to each artist,
-representing the typical musical style of their discography.
+Your task is to classify each artist below in terms of:
+1. an 8-dimensional style vector representing their overall discography
+2. the main language and additional languages commonly associated with their music
+3. their genres chosen from a fixed 18-genre list.
 
 For EACH artist below, output a JSON object with:
 - "artist_id": the Spotify artist ID
 - "artist_name": the artist name (as given)
-- "vector": a list of 5 floats between 0.0 and 1.0 (inclusive), in this exact order:
+- "primary_language": one main language
+- "languages": 1–3 languages from the allowed list
+- "genres": 2–3 genres from the fixed genre list
+- "style_vector": the 8-dimensional vector (floats 0–1)
+===============================
+LANGUAGE CLASSIFICATION RULES
+===============================
+For each artist:
 
-Vector dimensions (in order):
-1. energy      (0.0 = very calm / slow, 1.0 = very energetic / hype)
-2. valence     (0.0 = dark / sad, 1.0 = bright / happy)
-3. mainstream  (0.0 = indie / niche, 1.0 = very mainstream pop artist)
-4. modern      (0.0 = old-school / classic, 1.0 = very modern / current)
-5. vocal       (0.0 = mostly instrumental, 1.0 = very vocal-focused)
+- Choose EXACTLY one "primary_language".
+- Choose 1–3 values for "languages" from this list:
 
-Interpretation:
-- Consider their overall career, not one specific track.
-- If an artist spans diverse genres, approximate an average.
-- Use general music knowledge, genre, and public perception.
+english, mandarin, cantonese, korean, japanese,
+spanish, hindi, french, thai, vietnamese, others
 
-Rules:
-- Always output 5 floats between 0.0 and 1.0.
-- Keep vectors consistent across similar artists.
-- Follow input order exactly.
-- Output strictly a JSON array with no explanations.
+If you are unsure, include "others".
 
+===============================
+GENRE CLASSIFICATION RULES
+===============================
+For each artist:
+
+- Choose 2–3 genres that best represent their overall discography.
+- Genres MUST come ONLY from this list:
+
+pop, rock, hip-hop, r&b, k-pop, c-pop, j-pop, edm, indie,
+acoustic, lo-fi, metal, classical, jazz, soundtrack,
+melodic-rap, trap-rap, boom-bap, drill
+
+===============================
+STYLE VECTOR (8 DIMENSIONS)
+===============================
+For each artist, output "style_vector" as a list of 8 floats
+between 0.0 and 1.0 (inclusive), in THIS EXACT ORDER:
+
+1. energy
+   - 0.0 = very calm / slow / low intensity
+   - 1.0 = very energetic / loud / high intensity
+
+2. valence
+   - 0.0 = very dark / sad / negative emotion
+   - 1.0 = very bright / happy / positive emotion
+
+3. danceability
+   - 0.0 = not danceable (weak beat, irregular rhythm)
+   - 1.0 = very danceable (strong beat, steady rhythm)
+
+4. acousticness
+   - 0.0 = mainly electronic / synthetic sound
+   - 1.0 = primarily acoustic instrumentation
+
+5. instrumentalness
+   - 0.0 = strongly vocal-driven (singing, rap)
+   - 1.0 = mostly instrumental music
+
+6. speechiness
+   - 0.0 = minimal spoken words
+   - 1.0 = heavy spoken-word content (rap, talk, narration)
+
+7. tempo_norm
+   - 0.0 = very slow-feeling music
+   - 1.0 = very fast-feeling music
+
+8. mainstream
+   - 0.0 = niche / underground / indie
+   - 1.0 = very mainstream / widely commercial
+===============================
+OUTPUT FORMAT (STRICT)
+===============================
+Return STRICTLY a JSON array.
+Each element MUST be a JSON object of the form:
+
+{{
+  "artist_id": "...",
+  "artist_name": "...",
+  "primary_language": "english",
+  "languages": ["english", "french"],
+  "genres": ["pop", "edm"],
+  "style_vector": [0.50, 0.60, 0.80, 0.20, 0.05, 0.10, 0.70, 0.90]
+}}
+
+Requirements:
+- All 8 values in "style_vector" must be floats in [0.0, 1.0].
+- Follow the input artist order exactly.
+- Do NOT add comments, explanations, or extra keys.
+- Output must be a valid JSON array only.
+
+===============================
 Artists:
 {artist_list}
 """
@@ -287,7 +364,7 @@ def insert_track_vectors(results, df_original):
             "languages": [],
             "genres": [],
             "popularity": int(src.get("popularity") or 0),
-            "style_vector": item["vector"],
+            "style_vector": item["style_vector"],
             "created_at": now,
             "updated_at": now
         })
@@ -313,7 +390,7 @@ def insert_artist_vectors(results, df_original):
             "genres": [],
             "popularity": int(src.get("popularity") or 0),
             "followers": None,
-            "style_vector": item["vector"],
+            "style_vector": item["style_vector"],
             "created_at": now,
             "updated_at": now
         })
