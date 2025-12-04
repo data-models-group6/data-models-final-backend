@@ -39,24 +39,3 @@ def get_user_by_email(email: str):
         data["user_id"] = doc.id
         return data
     return None
-
-
-def update_avatar(user_id: str, avatar_url: str):
-    db = get_db()
-    db.collection("users").document(user_id).update({
-        "avatar_url": avatar_url
-    })
-
-from app.services.firestore_client import get_db
-
-def update_gender(user_id: str, gender: str):
-    db = get_db()
-    db.collection("users").document(user_id).update({
-        "gender": gender
-    })
-
-def update_display_name(user_id: str, name: str):
-    db = get_db()
-    db.collection("users").document(user_id).update({
-        "display_name": name
-    })
