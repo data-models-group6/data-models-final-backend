@@ -50,7 +50,7 @@ app.include_router(match_router, prefix="/api", tags=["Matching"])
 
 app.include_router(spotify_test_router, prefix="/api")
 
-app.include_router(match_history_router, prefix="/match_history") 
+app.include_router(match_history_router, prefix="/match_history", tags=["MatchHistory"]) 
 
 @app.get("/")
 def root():

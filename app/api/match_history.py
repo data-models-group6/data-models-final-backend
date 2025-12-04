@@ -19,7 +19,7 @@ router = APIRouter()
 # ======================================================
 # API 1：重建所有使用者偏好向量（批次更新）
 # ======================================================
-@router.post("/match_history/rebuild-all-vectors")
+@router.post("/rebuild-all-vectors")
 def rebuild_all_vectors():
     users = get_all_active_users()
     updated = 0
@@ -44,7 +44,7 @@ def rebuild_all_vectors():
 # ======================================================
 # API 2：取得相似使用者前 N 名
 # ======================================================
-@router.get("/match_history/candidates/{user_id}")
+@router.get("/candidates/{user_id}")
 def get_match_candidates(user_id: str, top_k: int = 10):
     # -----------------------------
     # 1. 取得 target user vector
