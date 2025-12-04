@@ -4,7 +4,7 @@ import uuid
 from app.services.firestore_client import get_db
 
 
-def create_user(email: str, password_hash: str):
+def create_user(data: dict):
     """
     在 users collection 建立新使用者資料
     """
