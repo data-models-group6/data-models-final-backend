@@ -28,6 +28,27 @@ def encode_one_hot(values, dictionary):
             idx = dictionary.index(v)
             vec[idx] += 1
     return vec
+# ======================================================
+# 工具：安全處理 BigQuery array (避免 numpy truth-value error)
+# ======================================================
+def safe_array(value):
+    """
+    BigQuery array → numpy array / list / None
+    全部安全轉換成 Python list
+    """
+    if value is None:
+        return []
+
+    # numpy array
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+
+    # already list
+    if isinstance(value, list):
+        return value
+
+    # fallback: scalar
+    return [value]
 
 
 # ---------------------------
@@ -149,9 +170,9 @@ def fetch_track_feature(client, track_id):
 
     row = df.iloc[0]
     return {
-        "genres": row["genres"] or [],
-        "languages": row["languages"] or [],
-        "style_vector": row["style_vector"] or []
+        "genres": safe_array(row.get("genres")),
+        "languages": safe_array(row.get("languages")),
+        "style_vector": safe_array(row.get("style_vector")),
     }
 
 
@@ -168,9 +189,9 @@ def fetch_artist_feature(client, artist_id):
 
     row = df.iloc[0]
     return {
-        "genres": row["genres"] or [],
-        "languages": row["languages"] or [],
-        "style_vector": row["style_vector"] or []
+        "genres": safe_array(row.get("genres")),
+        "languages": safe_array(row.get("languages")),
+        "style_vector": safe_array(row.get("style_vector")),
     }
 
 
