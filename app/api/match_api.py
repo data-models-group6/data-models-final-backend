@@ -1,107 +1,54 @@
-from fastapi import APIRouter, HTTPException
-from math import radians, cos, sin, asin, sqrt
-from typing import Literal
-import redis
-import os
-import time
+from fastapi import APIRouter, HTTPException, Depends
+import logging
+
+# 1. 引入你在 Heartbeat 用的 auth service
+from app.services.user_auth import get_current_user
+
+# 引入你的 Model 和 Service
+from app.models.match_models import SwipeRequest, SwipeResponse
+from app.services.match_service import process_swipe_transaction
 
 router = APIRouter()
 
-# Redis 連線設定
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+# 設定 Logger (這是上一段建議的優化，這裡順便幫你加進去)
+logger = logging.getLogger(__name__)
 
-redis_client = redis.StrictRedis(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-    password=REDIS_PASSWORD,
-    decode_responses=True,
-)
+@router.post("/swipe", response_model=SwipeResponse)
+def swipe_user(
+    payload: SwipeRequest,
+    user: dict = Depends(get_current_user)
+):
+    """
+    左滑/右滑功能 API
+    - Header 需帶入 Bearer Token (由 get_current_user 解析)
+    - Body: { "target_user_id": "...", "action": "LIKE" }
+    """
+    
+    # 3. 從 user dict 中取出 user_id
+    # 根據你的 heartbeat 程式碼，這裡回傳的是一個 dict，裡面有 "user_id"
+    current_user_id = user["user_id"]
 
-TIME_WINDOW_SECONDS = 90  # ±90 秒
+    # --- 以下邏輯保持不變 ---
 
+    # 基本防呆：不能滑自己
+    if payload.target_user_id == current_user_id:
+        raise HTTPException(status_code=400, detail="You cannot swipe yourself.")
 
-# --------------------------------------
-# Haversine 經緯度距離（公尺）
-# --------------------------------------
-def haversine(lat1, lng1, lat2, lng2):
-    R = 6371000
-    dlat = radians(lat2 - lat1)
-    dlng = radians(lng2 - lng1)
-    a = sin(dlat/2)**2 + cos(radians(lat1))*cos(radians(lat2))*sin(dlng/2)**2
-    c = 2 * asin(sqrt(a))
-    return R * c
+    try:
+        # 呼叫 Service 處理交易
+        result = process_swipe_transaction(
+            from_user_id=current_user_id,
+            target_user_id=payload.target_user_id,
+            action=payload.action.value 
+        )
+        
+        return SwipeResponse(
+            status="success",
+            is_match=result["is_match"],
+            match_id=result["match_id"]
+        )
 
-
-# --------------------------------------
-# Nearby Match API
-# --------------------------------------
-@router.post("/match-nearby")
-def match_nearby(payload: dict):
-
-    user_id = payload.get("user_id")
-    lat = payload.get("lat")
-    lng = payload.get("lng")
-    radius_m = payload.get("radius_m", 150)
-    mode: Literal["track", "artist"] = payload.get("mode", "track")
-
-    if not user_id:
-        raise HTTPException(400, "user_id required")
-    if lat is None or lng is None:
-        raise HTTPException(400, "lat/lng required")
-    if mode not in ("track", "artist"):
-        raise HTTPException(400, "mode must be 'track' or 'artist'")
-
-    # --- 抓自己的資料 ---
-    key = f"user:{user_id}"
-    self_data = redis_client.hgetall(key)
-
-    if not self_data:
-        return {"matches": [], "message": "Self status not found"}
-
-    self_track = self_data.get("track_id")
-    self_artist = self_data.get("artist_id")
-    self_timestamp = int(self_data.get("timestamp", 0))
-
-    # --- 抓所有使用者 ---
-    keys = redis_client.keys("user:*")
-
-    matches = []
-
-    for k in keys:
-        if k == key:
-            continue
-
-        d = redis_client.hgetall(k)
-        if not d:
-            continue
-
-        # --- 1. 距離 ---
-        o_lat = float(d["lat"])
-        o_lng = float(d["lng"])
-        dist = haversine(lat, lng, o_lat, o_lng)
-        if dist > radius_m:
-            continue
-
-        # --- 2. 曲目 / 歌手判斷 ---
-        if mode == "track" and d.get("track_id") != self_track:
-            continue
-        if mode == "artist" and d.get("artist_id") != self_artist:
-            continue
-
-        # --- 3. 時間戳 ---
-        o_ts = int(d.get("timestamp", 0))
-        if abs(self_timestamp - o_ts) > TIME_WINDOW_SECONDS:
-            continue
-
-        d["distance_m"] = dist
-        matches.append(d)
-
-    return {
-        "mode": mode,
-        "radius_m": radius_m,
-        "time_window_seconds": TIME_WINDOW_SECONDS,
-        "count": len(matches),
-        "matches": matches,
-    }
+    except Exception as e:
+        # 使用 logger 紀錄錯誤，比較正規
+        logger.error(f"Swipe Error: User {current_user_id} -> {payload.target_user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
