@@ -10,5 +10,6 @@ class Heartbeat(BaseModel):
     popularity: int
     timestamp: int
     album_image: str
+    display_name: str
     lat: float
     lng: float

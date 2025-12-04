@@ -16,6 +16,8 @@ router = APIRouter()
 async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
 
     user_id = user["user_id"]
+    display_name = user.get("display_name")
+    
     lat = payload.get("lat")
     lng = payload.get("lng")
 
@@ -58,8 +60,9 @@ async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
         "album_image": item["album"]["images"][0]["url"],
         "popularity": item.get("popularity", 0),
         "timestamp": int(time.time()),
+        "display_name":display_name,
         "lat": lat,
-        "lng": lng,
+        "lng": lng
     }
 
     publish_heartbeat(heartbeat)
