@@ -5,8 +5,6 @@ from app.services.user_service import (
     get_user_by_email,
 )
 from app.services.jwt_service import create_jwt_token
-from app.services.user_auth import get_current_user
-from app.services.storage_client import upload_avatar_to_gcs
 import hashlib
 from app.models.auth_models import (
     RegisterRequest, RegisterResponse,
