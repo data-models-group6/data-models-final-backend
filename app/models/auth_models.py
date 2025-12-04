@@ -9,6 +9,7 @@ class RegisterRequest(BaseModel):
     last_name: str
     birthday: str            # YYYY-MM-DD
     gender: Optional[str] = None
+    display_name: Optional[str] = None   
 
 class RegisterResponse(BaseModel):
     status: str
@@ -23,12 +24,3 @@ class LoginResponse(BaseModel):
     status: str
     user_id: str
     token: str
-
-class UpdateGenderRequest(BaseModel):
-    gender: str
-
-class UpdateNameRequest(BaseModel):
-    display_name: str
-
-class UpdateBirthdayRequest(BaseModel):
-    birthday: str   # YYYY-MM-DD

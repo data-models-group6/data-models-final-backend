@@ -19,7 +19,7 @@ if not GEMINI_API_KEY:
     raise Exception("Missing GEMINI_API_KEY in environment variables")
 
 genai.configure(api_key=GEMINI_API_KEY)
-llm = genai.GenerativeModel("gemini-1.5-pro")
+llm = genai.GenerativeModel("gemini-2.0-flash")
 
 bq = get_bq_client()
 
@@ -97,29 +97,100 @@ def build_track_prompt(df):
 
     return f"""
 You are a professional music curator and embedding designer.
-Your task is to assign a stable 5-dimensional numeric vector to each song,
-so that similar songs in terms of style and mood have similar vectors.
+Your task is to classify each song below in terms of:
+1. an 8-dimensional style vector
+2. its main language and additional languages
+3. its genres chosen from a fixed 15-genre list.
 
 For EACH song below, output a JSON object with:
 - "track_id": the Spotify track ID
 - "track_name": the track name (as given)
 - "artist_name": the artist name (as given)
-- "vector": a list of 5 floats between 0.0 and 1.0 (inclusive), in this exact order:
 
-Vector dimensions (in order):
-1. energy      (0.0 = very calm / slow, 1.0 = very energetic / hype)
-2. valence     (0.0 = dark / sad, 1.0 = bright / happy)
-3. mainstream  (0.0 = indie / niche, 1.0 = very mainstream pop hit)
-4. modern      (0.0 = vintage / old-school, 1.0 = very modern / current)
-5. vocal       (0.0 = mostly instrumental, 1.0 = very vocal-focused)
+===============================
+LANGUAGE CLASSIFICATION RULES
+===============================
+For each song:
 
-Rules:
-- Always produce 5 floats between 0.0 and 1.0 for each "vector".
-- If you are uncertain about a song, make your best guess based on the artist and title.
-- Keep the relative relationships consistent.
-- Follow the input order exactly.
-- Output strictly a JSON array with no explanations.
+- Choose EXACTLY one "primary_language".
+- Choose 1–3 values for "languages" from this list:
 
+english, mandarin, cantonese, korean, japanese,
+spanish, hindi, french, thai, vietnamese, others
+
+If you are unsure, choose "others" as one of the values.
+
+===============================
+GENRE CLASSIFICATION RULES
+===============================
+For each song:
+
+- Choose 2–3 genres from the fixed list below.
+- Genres MUST come ONLY from this list:
+
+pop, rock, hip-hop, r&b, k-pop, c-pop, j-pop, edm, indie,
+acoustic, lo-fi, metal, classical, jazz, soundtrack
+===============================
+STYLE VECTOR (8 DIMENSIONS)
+===============================
+For each song, output "style_vector" as a list of 8 floats
+between 0.0 and 1.0 (inclusive), in THIS EXACT ORDER:
+
+1. energy
+   - 0.0 = very calm / slow / low intensity
+   - 1.0 = very energetic / loud / high intensity
+
+2. valence
+   - 0.0 = very dark / sad / negative mood
+   - 1.0 = very bright / happy / positive mood
+
+3. danceability
+   - 0.0 = not suitable for dancing (irregular rhythm, weak beat)
+   - 1.0 = very suitable for dancing (strong beat, stable groove)
+
+4. acousticness
+   - 0.0 = purely electronic / synthetic
+   - 1.0 = fully acoustic / organic instruments
+
+5. instrumentalness
+   - 0.0 = clearly vocal-focused (singing, rap, spoken words)
+   - 1.0 = purely instrumental (almost no human voice)
+
+6. speechiness
+   - 0.0 = almost no spoken words (typical songs)
+   - 1.0 = mostly speech (podcast, talk, rap with dense words)
+
+7. tempo_norm
+   - A normalized tempo indicator (NOT the BPM itself).
+   - 0.0 = very slow feeling, 1.0 = very fast feeling.
+
+8. mainstream
+   - 0.0 = niche / underground / indie
+   - 1.0 = very mainstream / chart-hit style
+
+===============================
+OUTPUT FORMAT (STRICT)
+===============================
+Return STRICTLY a JSON array.
+Each element MUST be a JSON object of the form:
+
+{{
+  "track_id": "...",
+  "track_name": "...",
+  "artist_name": "...",
+  "primary_language": "english",
+  "languages": ["english", "japanese"],
+  "genres": ["pop", "edm"],
+  "style_vector": [0.60, 0.75, 0.80, 0.20, 0.10, 0.15, 0.65, 0.90]
+}}
+
+Requirements:
+- All 8 values in "style_vector" must be floats in [0.0, 1.0].
+- Follow the input song order exactly.
+- Do NOT add comments, explanations, or extra keys.
+- Output must be a valid JSON array only.
+
+===============================
 Songs:
 {songs_list}
 """
@@ -171,9 +242,29 @@ Artists:
 # 呼叫 Gemini
 # =====================================
 def ask_llm(prompt: str):
-    resp = llm.generate_content(prompt)
-    text = resp.text.strip()
-    return json.loads(text)
+    """
+    呼叫 Gemini，強制要求回傳純 JSON。
+    如果回傳不是合法 JSON，印出原始內容方便 debug。
+    """
+    response = llm.generate_content(
+        prompt,
+        generation_config={
+            "response_mime_type": "application/json"
+        }
+    )
+    text = (response.text or "").strip()
+
+    if not text:
+        # 這種情況多半是被 safety block 或其他錯誤
+        raise Exception("Gemini 回傳空內容（可能是 safety block），無法解析 JSON")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        # 直接把原始輸出印出來，之後你可以看 BigQuery / log 分析
+        print("==== Raw LLM Output (for debug) ====")
+        print(repr(text))
+        print("====================================")
+        raise
 
 
 
