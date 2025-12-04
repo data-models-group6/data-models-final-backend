@@ -36,7 +36,7 @@ def get_all_active_users():
             UNION DISTINCT
             SELECT user_id FROM `spotify-match-project.user_event.user_top_artists`
             UNION DISTINCT
-            SELECT user_id FROM `spotify-match-project.user_event.user_favorite_track`
+            SELECT user_id FROM `spotify-match-project.user_event.user_favorite_tracks`
         )
     """).to_dataframe()
     return df["user_id"].tolist()

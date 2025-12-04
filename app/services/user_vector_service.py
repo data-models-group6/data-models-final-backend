@@ -51,7 +51,7 @@ def compute_user_vector(user_id):
 
     favorites = client.query(f"""
         SELECT track_id
-        FROM `spotify-match-project.user_event.user_favorite_track`
+        FROM `spotify-match-project.user_event.user_favorite_tracks`
         WHERE user_id = '{user_id}'
     """).to_dataframe()
 
