@@ -57,7 +57,7 @@ def safe_array(value):
 def compute_user_vector(user_id):
     client = get_bq_client()
 
-    # ---- 取得各來源資料 ----
+    # 1. 讀取 user 的資料
     tracks = client.query(f"""
         SELECT track_id, period
         FROM `spotify-match-project.user_event.user_top_tracks`
@@ -79,77 +79,76 @@ def compute_user_vector(user_id):
     if tracks.empty and artists.empty and favorites.empty:
         return None
 
-    # ---- 權重設定 ----
-    period_weight = {
-        "short_term": 1.3,
-        "medium_term": 1.0,
-        "long_term": 0.7
-    }
+    # 2. 一次查所有 track_features / artist_features
+    all_track_ids = set(tracks["track_id"].tolist()) | set(favorites["track_id"].tolist())
+    all_artist_ids = set(artists["artist_id"].tolist())
 
+    track_features = fetch_track_features(client, list(all_track_ids))
+    artist_features = fetch_artist_features(client, list(all_artist_ids))
+
+    # 3. 權重
+    period_weight = {"short_term": 1.3, "medium_term": 1.0, "long_term": 0.7}
     favorite_weight = 1.0
 
     style_acc = np.zeros(8)
     genre_acc = np.zeros(len(GENRE_LIST))
     lang_acc = np.zeros(len(LANG_LIST))
-
     total_weight = 0
 
-    # ---- 處理 favorite tracks ----
+    # ================================
+    # Favorite Tracks
+    # ================================
     for _, row in favorites.iterrows():
-        track_id = row["track_id"]
-
-        feature = fetch_track_feature(client, track_id)
-        if feature is None:
+        f = track_features.get(row["track_id"])
+        if f is None:
             continue
 
         w = favorite_weight
-        style_acc += np.array(feature["style_vector"]) * w
-        genre_acc += encode_one_hot(feature["genres"], GENRE_LIST) * w
-        lang_acc += encode_one_hot(feature["languages"], LANG_LIST) * w
+        style_acc += np.array(f["style_vector"]) * w
+        genre_acc += encode_one_hot(f["genres"], GENRE_LIST) * w
+        lang_acc += encode_one_hot(f["languages"], LANG_LIST) * w
         total_weight += w
 
-    # ---- 處理 top_tracks ----
+    # ================================
+    # Top Tracks
+    # ================================
     for _, row in tracks.iterrows():
-        track_id = row["track_id"]
-        weight = period_weight.get(row["period"], 1.0)
-
-        feature = fetch_track_feature(client, track_id)
-        if feature is None:
+        f = track_features.get(row["track_id"])
+        if f is None:
             continue
 
-        style_acc += np.array(feature["style_vector"]) * weight
-        genre_acc += encode_one_hot(feature["genres"], GENRE_LIST) * weight
-        lang_acc += encode_one_hot(feature["languages"], LANG_LIST) * weight
-        total_weight += weight
+        w = period_weight.get(row["period"], 1.0)
+        style_acc += np.array(f["style_vector"]) * w
+        genre_acc += encode_one_hot(f["genres"], GENRE_LIST) * w
+        lang_acc += encode_one_hot(f["languages"], LANG_LIST) * w
+        total_weight += w
 
-    # ---- 處理 top_artists ----
+    # ================================
+    # Top Artists
+    # ================================
     for _, row in artists.iterrows():
-        artist_id = row["artist_id"]
-        weight = period_weight.get(row["period"], 1.0)
-
-        feature = fetch_artist_feature(client, artist_id)
-        if feature is None:
+        f = artist_features.get(row["artist_id"])
+        if f is None:
             continue
 
-        style_acc += np.array(feature["style_vector"]) * weight
-        genre_acc += encode_one_hot(feature["genres"], GENRE_LIST) * weight
-        lang_acc += encode_one_hot(feature["languages"], LANG_LIST) * weight
-        total_weight += weight
+        w = period_weight.get(row["period"], 1.0)
+        style_acc += np.array(f["style_vector"]) * w
+        genre_acc += encode_one_hot(f["genres"], GENRE_LIST) * w
+        lang_acc += encode_one_hot(f["languages"], LANG_LIST) * w
+        total_weight += w
 
-    # ---- 正規化 ----
+    # ================================
+    # 正規化
+    # ================================
     if total_weight == 0:
         return None
 
-    style_vec = (style_acc / total_weight).tolist()
-    genre_vec = (genre_acc / total_weight).tolist()
-    lang_vec = (lang_acc / total_weight).tolist()
-
     return {
         "user_id": user_id,
-        "style_vector": style_vec,
-        "genre_vector": genre_vec,
-        "language_vector": lang_vec,
-        "total_interactions": int(total_weight),
+        "style_vector": (style_acc / total_weight).tolist(),
+        "genre_vector": (genre_acc / total_weight).tolist(),
+        "language_vector": (lang_acc / total_weight).tolist(),
+        "total_interactions": float(total_weight),
         "last_update": datetime.now(timezone.utc).isoformat()
     }
 
@@ -157,42 +156,48 @@ def compute_user_vector(user_id):
 # ---------------------------
 # BigQuery Lookup Functions
 # ---------------------------
-def fetch_track_feature(client, track_id):
+def fetch_track_features(client, track_ids):
+    if not track_ids:
+        return {}
+
+    ids_str = ",".join([f"'{tid}'" for tid in track_ids])
+
     df = client.query(f"""
-        SELECT genres, languages, style_vector
+        SELECT track_id, genres, languages, style_vector
         FROM `spotify-match-project.user_event.track_features`
-        WHERE track_id = '{track_id}'
-        LIMIT 1
+        WHERE track_id IN ({ids_str})
     """).to_dataframe()
 
-    if df.empty:
-        return None
+    result = {}
+    for _, row in df.iterrows():
+        result[row["track_id"]] = {
+            "genres": safe_array(row.get("genres")),
+            "languages": safe_array(row.get("languages")),
+            "style_vector": safe_array(row.get("style_vector")),
+        }
+    return result
 
-    row = df.iloc[0]
-    return {
-        "genres": safe_array(row.get("genres")),
-        "languages": safe_array(row.get("languages")),
-        "style_vector": safe_array(row.get("style_vector")),
-    }
 
+def fetch_artist_features(client, artist_ids):
+    if not artist_ids:
+        return {}
 
-def fetch_artist_feature(client, artist_id):
+    ids_str = ",".join([f"'{aid}'" for aid in artist_ids])
+
     df = client.query(f"""
-        SELECT genres, languages, style_vector
+        SELECT artist_id, genres, languages, style_vector
         FROM `spotify-match-project.user_event.artist_features`
-        WHERE artist_id = '{artist_id}'
-        LIMIT 1
+        WHERE artist_id IN ({ids_str})
     """).to_dataframe()
 
-    if df.empty:
-        return None
-
-    row = df.iloc[0]
-    return {
-        "genres": safe_array(row.get("genres")),
-        "languages": safe_array(row.get("languages")),
-        "style_vector": safe_array(row.get("style_vector")),
-    }
+    result = {}
+    for _, row in df.iterrows():
+        result[row["artist_id"]] = {
+            "genres": safe_array(row.get("genres")),
+            "languages": safe_array(row.get("languages")),
+            "style_vector": safe_array(row.get("style_vector")),
+        }
+    return result
 
 
 # ---------------------------
