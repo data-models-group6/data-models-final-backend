@@ -4,6 +4,7 @@ import numpy as np
 from google.cloud import bigquery
 from app.services.bigquery_client import get_bq_client
 from app.services.firestore_client import get_db
+from app.services.user_vector_service import safe_array
 
 
 # ======================================================
@@ -60,10 +61,10 @@ def get_user_vector(user_id: str):
 
     row = df.iloc[0]
     return {
-        "user_id": row["user_id"],
-        "style": row["style_vector"] or [],
-        "language": row["language_vector"] or [],
-        "genre": row["genre_vector"] or []
+    "user_id": row["user_id"],
+    "style": safe_array(row.get("style_vector")),
+    "language": safe_array(row.get("language_vector")),
+    "genre": safe_array(row.get("genre_vector")),
     }
 
 
