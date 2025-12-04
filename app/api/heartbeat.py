@@ -8,9 +8,11 @@ from app.services.spotify_token_service import (
 from app.services.spotify_now_playing import fetch_now_playing
 from app.services.user_auth import get_current_user
 import time
+from app.services.redis_service import HeartbeatRedisService
 
 router = APIRouter()
 
+redis_service = HeartbeatRedisService()
 
 @router.post("/heartbeat-auto")
 async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
@@ -62,6 +64,22 @@ async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
         "lng": lng,
     }
 
+    # 4. 存到 Redis
+    redis_service.set_heartbeat(user_id, heartbeat)
+    
+    groups = redis_service.get_nearby_music_groups(
+        my_user_id=user_id,
+        my_track_id=item["id"],
+        my_artist_id=item["artists"][0]["id"],
+        my_lat=lat,
+        my_lng=lng
+    )
+
     publish_heartbeat(heartbeat)
 
-    return {"status": "ok", "sent": heartbeat}
+    return {
+        "status": "ok",
+        "sent": heartbeat,
+        "same_track": groups["same_track"],
+        "same_artist": groups["same_artist"]
+    }
