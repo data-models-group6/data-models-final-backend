@@ -389,7 +389,6 @@ def insert_artist_vectors(results, df_original):
             "languages": item["languages"],
             "genres": item["genres"],
             "popularity": int(src.get("popularity") or 0),
-            "followers": None,
             "style_vector": item["style_vector"],
             "created_at": now,
             "updated_at": now
