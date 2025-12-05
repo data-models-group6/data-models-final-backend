@@ -63,7 +63,7 @@ def upload_avatar_to_gcs(user_id: str, file_bytes: bytes, content_type: str) -> 
     # 測試階段，直接設成公開
     signed_url = blob.generate_signed_url(
         version="v4",
-        expiration=timedelta(days=365),
+        expiration=timedelta(days=7),
         method="GET",
     )
 
