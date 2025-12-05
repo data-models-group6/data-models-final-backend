@@ -247,23 +247,17 @@ def generate_avatar_bytes(user_id: str) -> bytes:
     model = _get_image_model()
 
     images = model.generate_images(
-    prompt=prompt,
-    number_of_images=1,
-    safety_settings={
-        "HARASSMENT": "BLOCK_SOME",
-        "HATE_SPEECH": "BLOCK_SOME",
-        "DANGEROUS_CONTENT": "BLOCK_SOME",
-        "SEXUAL_CONTENT": "BLOCK_SOME",
-        "VIOLENCE": "BLOCK_SOME",
-    }
-)
+        prompt=prompt,
+        number_of_images=1,
+        # 如果版本支援，也可以加上：
+        # output_mime_type="image/png",
+    )
 
     if not images:
         raise Exception("Vertex AI did not return any image")
 
     img = images[0]
 
-    # 不同版本 SDK image_bytes 欄位名稱可能不同，這裡做個兼容
     image_bytes = getattr(img, "image_bytes", None)
     if image_bytes is None:
         image_bytes = getattr(img, "_image_bytes", None)
