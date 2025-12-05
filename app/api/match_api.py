@@ -54,18 +54,22 @@ def swipe_user(
 @router.get("/liked-me", response_model=PendingLikesResponse)
 def get_pending_likes(user: dict = Depends(get_current_user)):
     """
-    取得「喜歡我」但「我還沒處理(未滑過)」的使用者列表。
-    這通常用於 APP 的 "Who Liked You" 頁面。
+    取得「喜歡我」但「我還沒處理」的使用者列表 (含名字與照片)。
     """
     current_user_id = user["user_id"]
 
     try:
-        # 呼叫 Service
+        # Service 現在會回傳包含 name 和 photo_url 的字典列表
         results = get_users_who_liked_me(current_user_id)
         
-        # 轉換格式為 Pydantic Model
+        # 轉換格式
         response_list = [
-            LikedMeUserItem(user_id=item["user_id"], liked_at=item["liked_at"]) 
+            LikedMeUserItem(
+                user_id=item["user_id"], 
+                liked_at=item["liked_at"],
+                display_name=item["display_name"],           # 確保這裡有傳入
+                avatarUrl=item["avatarUrl"]  # 確保這裡有傳入
+            ) 
             for item in results
         ]
 
@@ -76,4 +80,4 @@ def get_pending_likes(user: dict = Depends(get_current_user)):
 
     except Exception as e:
         logger.error(f"Error fetching pending likes for {current_user_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
