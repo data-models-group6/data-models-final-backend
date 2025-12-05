@@ -21,8 +21,8 @@ class SwipeResponse(BaseModel):
 
 class LikedMeUserItem(BaseModel):
     user_id: str = Field(..., description="喜歡我的使用者 ID")
-    name: str = Field(..., description="使用者名稱")
-    photo_url: Optional[str] = Field(None, description="使用者頭像 URL")
+    display_name: str = Field(..., description="使用者名稱")
+    avatarUrl: Optional[str] = Field(None, description="使用者頭像 URL")
     liked_at: datetime = Field(..., description="對方按讚的時間")
 
 class PendingLikesResponse(BaseModel):
