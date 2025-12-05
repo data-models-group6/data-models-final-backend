@@ -44,5 +44,6 @@ def login(payload: LoginRequest):
     token = create_jwt_token(user["user_id"])
     # 若沒有 avatarUrl → 回傳空字串
     avatarUrl = user.get("avatarUrl", "") or ""
+    display_name = user.get("display_name", "") or ""
 
-    return {"status": "ok", "user_id": user["user_id"], "token": token, "avatarUrl":avatarUrl}
+    return {"status": "ok", "user_id": user["user_id"], "token": token, "avatarUrl":avatarUrl, "display_name": display_name}
