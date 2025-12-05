@@ -59,16 +59,15 @@ def get_pending_likes(user: dict = Depends(get_current_user)):
     current_user_id = user["user_id"]
 
     try:
-        # Service 現在會回傳包含 name 和 photo_url 的字典列表
         results = get_users_who_liked_me(current_user_id)
         
-        # 轉換格式
         response_list = [
             LikedMeUserItem(
                 user_id=item["user_id"], 
                 liked_at=item["liked_at"],
-                display_name=item["display_name"],           # 確保這裡有傳入
-                avatarUrl=item["avatarUrl"]  # 確保這裡有傳入
+                # Service 現在回傳的 Key 是 display_name 與 avatarUrl
+                display_name=item["display_name"],  
+                avatarUrl=item["avatarUrl"]
             ) 
             for item in results
         ]

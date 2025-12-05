@@ -106,9 +106,10 @@ def get_users_who_liked_me(current_user_id: str):
     db = get_db()
 
     # 1. 查詢「誰喜歡我」
+    # 使用 keyword arguments 以減少警告
     incoming_query = db.collection("swipes")\
-        .where("to_user_id", "==", current_user_id)\
-        .where("action", "==", "LIKE")
+        .where(field_path="to_user_id", op_string="==", value=current_user_id)\
+        .where(field_path="action", op_string="==", value="LIKE")
     
     incoming_docs = incoming_query.stream()
     
@@ -125,7 +126,7 @@ def get_users_who_liked_me(current_user_id: str):
 
     # 2. 查詢「我滑過誰」 (用來過濾)
     my_actions_query = db.collection("swipes")\
-        .where("from_user_id", "==", current_user_id)
+        .where(field_path="from_user_id", op_string="==", value=current_user_id)
     
     my_actions_docs = my_actions_query.stream()
     
@@ -140,28 +141,27 @@ def get_users_who_liked_me(current_user_id: str):
     pending_users = []
     
     for user_id, liked_at in incoming_likes_map.items():
-        # 如果這個人我還沒滑過 (不再 already_swiped_ids 裡)
         if user_id not in already_swiped_ids:
             
-            # --- 新增邏輯：去 Users 集合抓資料 ---
             user_ref = db.collection("users").document(user_id)
             user_doc = user_ref.get()
             
-            # 預設值，萬一 User 資料被刪了或是欄位不全
+            # 預設值
             display_name = "Unknown User"
             avatarUrl = None
             
             if user_doc.exists:
                 user_data = user_doc.to_dict()
-                display_name = user_data.get("display_name", "Unknown User")
-                # 假設你資料庫欄位叫 photo_url，如果是 avatar 或其他名字要改這裡
-                avatarUrl = user_data.get("avatarUrl", None) 
+                # 嘗試取得 display_name，若沒有則找 name，再沒有則預設值
+                display_name = user_data.get("display_name", user_data.get("name", "Unknown User"))
+                # 嘗試取得 avatarUrl，若沒有則找 photo_url
+                avatarUrl = user_data.get("avatarUrl", user_data.get("photo_url", None))
             
             pending_users.append({
                 "user_id": user_id,
                 "liked_at": liked_at,
-                "name": display_name,
-                "avatarUrl": avatarUrl
+                "display_name": display_name,  # 修正：Key 改為 display_name
+                "avatarUrl": avatarUrl         # 修正：Key 改為 avatarUrl
             })
 
     # 4. 排序
