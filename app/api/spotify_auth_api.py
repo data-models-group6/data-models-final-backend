@@ -125,4 +125,4 @@ def callback(
     save_spotify_token(user_id, token_data)
 
     # 7. 授權完成後 redirect 回前端的某個頁面（之後你可以改成設定檔）
-    return RedirectResponse(url="http://localhost:5173/authorization/location")
+    return RedirectResponse(url="https://data-models-final-frontend.onrender.com/authorization/location")
