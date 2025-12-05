@@ -19,7 +19,8 @@ async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
 
     user_id = user["user_id"]
     display_name = user.get("display_name")
-    
+    avatarUrl = user.get("avatarUrl")
+
     lat = payload.get("lat")
     lng = payload.get("lng")
 
@@ -63,6 +64,7 @@ async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
         "popularity": item.get("popularity", 0),
         "timestamp": int(time.time()),
         "display_name":display_name,
+        "avatarUrl":avatarUrl,
         "lat": lat,
         "lng": lng
     }

@@ -42,5 +42,6 @@ def login(payload: LoginRequest):
         raise HTTPException(401, "Password incorrect")
 
     token = create_jwt_token(user["user_id"])
+    avatarUrl = user["avatarUrl"]
 
-    return {"status": "ok", "user_id": user["user_id"], "token": token}
+    return {"status": "ok", "user_id": user["user_id"], "token": token, "avatarUrl":avatarUrl}

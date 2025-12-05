@@ -11,5 +11,6 @@ class Heartbeat(BaseModel):
     timestamp: int
     album_image: str
     display_name: str
+    avatarUrl: str
     lat: float
     lng: float
