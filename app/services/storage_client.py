@@ -57,7 +57,7 @@ def upload_avatar_to_gcs(user_id: str, file_bytes: bytes, content_type: str) -> 
     client = get_gcs_client()
     bucket = client.bucket(GCP_BUCKET_NAME)
 
-    blob = bucket.blob(f"avatars/{user_id}.jpg")
+    blob = bucket.blob(f"avatars/{user_id}.png")
     blob.upload_from_string(file_bytes, content_type=content_type)
 
     # 測試階段，直接設成公開
