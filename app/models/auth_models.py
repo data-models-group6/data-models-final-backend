@@ -25,4 +25,5 @@ class LoginResponse(BaseModel):
     user_id: str
     token: str
     avatarUrl: str
+    display_name: str
 
