@@ -208,6 +208,28 @@ def save_user_vector(vector_data):
 
     table = "spotify-match-project.user_event.user_preference_vectors"
 
-    errors = client.insert_rows_json(table, [vector_data])
-    if errors:
-        print("BigQuery insert error:", errors)
+    sql = f"""
+    MERGE `{table}` T
+    USING (
+        SELECT
+            '{vector_data["user_id"]}' AS user_id,
+            {vector_data["style_vector"]} AS style_vector,
+            {vector_data["genre_vector"]} AS genre_vector,
+            {vector_data["language_vector"]} AS language_vector,
+            {vector_data["total_interactions"]} AS total_interactions,
+            '{vector_data["last_update"]}' AS last_update
+    ) S
+    ON T.user_id = S.user_id
+    WHEN MATCHED THEN
+      UPDATE SET
+        style_vector = S.style_vector,
+        genre_vector = S.genre_vector,
+        language_vector = S.language_vector,
+        total_interactions = S.total_interactions,
+        last_update = S.last_update
+    WHEN NOT MATCHED THEN
+      INSERT (user_id, style_vector, genre_vector, language_vector, total_interactions, last_update)
+      VALUES (S.user_id, S.style_vector, S.genre_vector, S.language_vector, S.total_interactions, S.last_update)
+    """
+
+    client.query(sql).result()
