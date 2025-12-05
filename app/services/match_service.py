@@ -168,3 +168,74 @@ def get_users_who_liked_me(current_user_id: str):
     pending_users.sort(key=lambda x: x["liked_at"], reverse=True)
 
     return pending_users
+
+def get_users_i_liked(current_user_id: str):
+    """
+    取得「我右滑過」但「尚未配對成功」的使用者列表。
+    """
+    db = get_db()
+
+    # 1. 查詢我喜歡的人 (My Likes)
+    my_likes_query = db.collection("swipes")\
+        .where(field_path="from_user_id", op_string="==", value=current_user_id)\
+        .where(field_path="action", op_string="==", value="LIKE")
+    
+    my_likes_docs = my_likes_query.stream()
+    
+    # 建立字典: { target_user_id: swiped_at_time }
+    my_likes_map = {}
+    for doc in my_likes_docs:
+        data = doc.to_dict()
+        target_id = data.get("to_user_id")
+        created_at = data.get("created_at")
+        if target_id:
+            my_likes_map[target_id] = created_at
+
+    if not my_likes_map:
+        return []
+
+    # 2. 查詢已經配對的人 (Matched Users)
+    # 我們只要查詢 matches 集合中包含 current_user_id 的文件
+    matches_query = db.collection("matches")\
+        .where(field_path="users", op_string="array_contains", value=current_user_id)
+    
+    matches_docs = matches_query.stream()
+    
+    matched_user_ids = set()
+    for doc in matches_docs:
+        data = doc.to_dict()
+        users_list = data.get("users", [])
+        # 找出配對中「另一個」人的 ID
+        for uid in users_list:
+            if uid != current_user_id:
+                matched_user_ids.add(uid)
+
+    # 3. 過濾並抓取 User 詳細資料
+    sent_users = []
+    
+    for user_id, liked_at in my_likes_map.items():
+        # 如果這個人不在配對名單中 -> 代表是單方面喜歡 (或對方按了 PASS)
+        if user_id not in matched_user_ids:
+            
+            user_ref = db.collection("users").document(user_id)
+            user_doc = user_ref.get()
+            
+            display_name = "Unknown User"
+            avatarUrl = None
+            
+            if user_doc.exists:
+                user_data = user_doc.to_dict()
+                display_name = user_data.get("display_name", user_data.get("name", "Unknown User"))
+                avatarUrl = user_data.get("avatarUrl", user_data.get("photo_url", None))
+            
+            sent_users.append({
+                "user_id": user_id,
+                "liked_at": liked_at,
+                "display_name": display_name,
+                "avatarUrl": avatarUrl
+            })
+
+    # 4. 排序 (最新的在前面)
+    sent_users.sort(key=lambda x: x["liked_at"], reverse=True)
+
+    return sent_users

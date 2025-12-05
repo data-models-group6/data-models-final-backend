@@ -28,3 +28,13 @@ class LikedMeUserItem(BaseModel):
 class PendingLikesResponse(BaseModel):
     count: int = Field(..., description="總共有多少人喜歡我且未處理")
     users: List[LikedMeUserItem] = Field(..., description="使用者列表")
+
+class SentLikeUserItem(BaseModel):
+    user_id: str = Field(..., description="我喜歡的使用者 ID")
+    display_name: str = Field(..., description="使用者名稱")
+    avatarUrl: Optional[str] = Field(None, description="使用者頭像 URL")
+    liked_at: datetime = Field(..., description="我按讚的時間")
+
+class SentLikesResponse(BaseModel):
+    count: int = Field(..., description="總共有多少人我喜歡但尚未配對")
+    users: List[SentLikeUserItem] = Field(..., description="使用者列表")

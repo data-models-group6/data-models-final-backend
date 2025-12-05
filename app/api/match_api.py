@@ -3,8 +3,8 @@ import logging
 from typing import List
 
 from app.services.user_auth import get_current_user
-from app.models.match_models import SwipeRequest, SwipeResponse, PendingLikesResponse, LikedMeUserItem
-from app.services.match_service import process_swipe_transaction, get_users_who_liked_me
+from app.models.match_models import SwipeRequest, SwipeResponse, PendingLikesResponse, LikedMeUserItem, SentLikesResponse, SentLikeUserItem
+from app.services.match_service import process_swipe_transaction, get_users_who_liked_me, get_users_i_liked
 
 router = APIRouter()
 
@@ -79,4 +79,34 @@ def get_pending_likes(user: dict = Depends(get_current_user)):
 
     except Exception as e:
         logger.error(f"Error fetching pending likes for {current_user_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+@router.get("/my-likes", response_model=SentLikesResponse)
+def get_my_sent_likes(user: dict = Depends(get_current_user)):
+    """
+    取得「我喜歡」但「尚未配對成功」的使用者列表 (My Sent Likes)。
+    這會過濾掉已經 Match 的人。
+    """
+    current_user_id = user["user_id"]
+
+    try:
+        results = get_users_i_liked(current_user_id)
+        
+        response_list = [
+            SentLikeUserItem(
+                user_id=item["user_id"], 
+                liked_at=item["liked_at"],
+                display_name=item["display_name"],  
+                avatarUrl=item["avatarUrl"]
+            ) 
+            for item in results
+        ]
+
+        return SentLikesResponse(
+            count=len(response_list),
+            users=response_list
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching sent likes for {current_user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
