@@ -12,14 +12,17 @@ from app.services.match_utils import (
     get_user_profile,
     get_user_top_songs
 )
-
+from app.models.match_history_models import (
+    RebuildAllVectorsResponse,
+    MatchCandidatesResponse
+)
 router = APIRouter()
 
 
 # ======================================================
 # API 1：重建所有使用者偏好向量（批次更新）
 # ======================================================
-@router.post("/rebuild-all-vectors")
+@router.post("/rebuild-all-vectors", response_model=RebuildAllVectorsResponse)
 def rebuild_all_vectors():
     users = get_all_active_users()
     updated = 0
@@ -44,7 +47,7 @@ def rebuild_all_vectors():
 # ======================================================
 # API 2：取得相似使用者前 N 名
 # ======================================================
-@router.get("/candidates/{user_id}")
+@router.get("/candidates/{user_id}", response_model=MatchCandidatesResponse)
 def get_match_candidates(user_id: str, top_k: int = 10):
     # -----------------------------
     # 1. 取得 target user vector

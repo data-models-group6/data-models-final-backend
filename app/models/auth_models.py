@@ -24,3 +24,5 @@ class LoginResponse(BaseModel):
     status: str
     user_id: str
     token: str
+    avatarUrl: str
+
