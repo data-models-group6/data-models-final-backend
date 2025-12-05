@@ -1,12 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 import logging
+from typing import List
 
-# 1. 引入你在 Heartbeat 用的 auth service
 from app.services.user_auth import get_current_user
-
-# 引入你的 Model 和 Service
-from app.models.match_models import SwipeRequest, SwipeResponse
-from app.services.match_service import process_swipe_transaction
+from app.models.match_models import SwipeRequest, SwipeResponse, PendingLikesResponse, LikedMeUserItem
+from app.services.match_service import process_swipe_transaction, get_users_who_liked_me
 
 router = APIRouter()
 
@@ -51,4 +49,31 @@ def swipe_user(
     except Exception as e:
         # 使用 logger 紀錄錯誤，比較正規
         logger.error(f"Swipe Error: User {current_user_id} -> {payload.target_user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+@router.get("/liked-me", response_model=PendingLikesResponse)
+def get_pending_likes(user: dict = Depends(get_current_user)):
+    """
+    取得「喜歡我」但「我還沒處理(未滑過)」的使用者列表。
+    這通常用於 APP 的 "Who Liked You" 頁面。
+    """
+    current_user_id = user["user_id"]
+
+    try:
+        # 呼叫 Service
+        results = get_users_who_liked_me(current_user_id)
+        
+        # 轉換格式為 Pydantic Model
+        response_list = [
+            LikedMeUserItem(user_id=item["user_id"], liked_at=item["liked_at"]) 
+            for item in results
+        ]
+
+        return PendingLikesResponse(
+            count=len(response_list),
+            users=response_list
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching pending likes for {current_user_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

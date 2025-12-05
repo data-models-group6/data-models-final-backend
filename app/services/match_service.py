@@ -98,3 +98,65 @@ def _execute_swipe_transaction(transaction, swipe_ref, reverse_swipe_ref, match_
         "is_match": is_match,
         "match_id": match_ref.id if is_match else None
     }
+
+def get_users_who_liked_me(current_user_id: str):
+    """
+    取得「右滑我」但「我還沒滑過他」的使用者列表。
+    """
+    db = get_db()
+
+    # 1. 查詢「誰喜歡我」 (Incoming Likes)
+    # 條件：to_user_id == 我, action == LIKE
+    incoming_query = db.collection("swipes")\
+        .where("to_user_id", "==", current_user_id)\
+        .where("action", "==", "LIKE")
+    
+    incoming_docs = incoming_query.stream()
+    
+    # 建立一個暫存字典: { user_id: liked_at_time }
+    incoming_likes_map = {}
+    for doc in incoming_docs:
+        data = doc.to_dict()
+        sender_id = data.get("from_user_id")
+        created_at = data.get("created_at")
+        if sender_id:
+            incoming_likes_map[sender_id] = created_at
+
+    # 如果沒人喜歡我，直接回傳空陣列 (節省資料庫讀取)
+    if not incoming_likes_map:
+        return []
+
+    # 2. 查詢「我滑過誰」 (My Actions)
+    # 條件：from_user_id == 我 (不管是 LIKE 還是 PASS 都要過濾掉)
+    # 因為如果我們已經 Match (我 LIKE 他)，不需顯示。
+    # 如果我已經 PASS 他，也不需顯示。
+    my_actions_query = db.collection("swipes")\
+        .where("from_user_id", "==", current_user_id)
+    
+    my_actions_docs = my_actions_query.stream()
+    
+    # 收集所有我處理過的 user_id
+    already_swiped_ids = set()
+    for doc in my_actions_docs:
+        data = doc.to_dict()
+        target_id = data.get("to_user_id")
+        if target_id:
+            already_swiped_ids.add(target_id)
+
+    # 3. 過濾邏輯 (Set Difference)
+    # 想要的名單 = (喜歡我的人) - (我已經滑過的人)
+    pending_users = []
+    
+    # 對每一個喜歡我的人，檢查我是否已經滑過他
+    for user_id, liked_at in incoming_likes_map.items():
+        if user_id not in already_swiped_ids:
+            pending_users.append({
+                "user_id": user_id,
+                "liked_at": liked_at
+            })
+
+    # 4. 排序 (通常顯示最新的在前面)
+    # 注意：如果 liked_at 是 None 或格式不對，需做例外處理，這裡假設資料完整
+    pending_users.sort(key=lambda x: x["liked_at"], reverse=True)
+
+    return pending_users
