@@ -204,22 +204,33 @@ def fetch_artist_features(client, artist_ids):
 # 寫入 BigQuery
 # ---------------------------
 def save_user_vector(vector_data):
-    client = get_bq_client()
+    """
+    使用 BigQuery MERGE 寫入（Upsert）
+    - 若 user_id 已存在 → UPDATE
+    - 若不存在 → INSERT
+    """
 
+    client = get_bq_client()
     table = "spotify-match-project.user_event.user_preference_vectors"
+
+    # --- 轉換 Python list → BigQuery ARRAY 格式 ---
+    style_vec = ",".join([str(v) for v in vector_data["style_vector"]])
+    genre_vec = ",".join([str(v) for v in vector_data["genre_vector"]])
+    lang_vec = ",".join([str(v) for v in vector_data["language_vector"]])
 
     sql = f"""
     MERGE `{table}` T
     USING (
         SELECT
             '{vector_data["user_id"]}' AS user_id,
-            {vector_data["style_vector"]} AS style_vector,
-            {vector_data["genre_vector"]} AS genre_vector,
-            {vector_data["language_vector"]} AS language_vector,
-            {vector_data["total_interactions"]} AS total_interactions,
-            '{vector_data["last_update"]}' AS last_update
+            ARRAY[{style_vec}] AS style_vector,
+            ARRAY[{genre_vec}] AS genre_vector,
+            ARRAY[{lang_vec}] AS language_vector,
+            {float(vector_data["total_interactions"])} AS total_interactions,
+            TIMESTAMP('{vector_data["last_update"]}') AS last_update
     ) S
     ON T.user_id = S.user_id
+
     WHEN MATCHED THEN
       UPDATE SET
         style_vector = S.style_vector,
@@ -227,9 +238,15 @@ def save_user_vector(vector_data):
         language_vector = S.language_vector,
         total_interactions = S.total_interactions,
         last_update = S.last_update
+
     WHEN NOT MATCHED THEN
       INSERT (user_id, style_vector, genre_vector, language_vector, total_interactions, last_update)
       VALUES (S.user_id, S.style_vector, S.genre_vector, S.language_vector, S.total_interactions, S.last_update)
     """
 
-    client.query(sql).result()
+    try:
+        client.query(sql).result()
+        print(f"[OK] Upserted preference vector for user {vector_data['user_id']}")
+    except Exception as e:
+        print("BigQuery MERGE error:", e)
+        raise
