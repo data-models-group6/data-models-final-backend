@@ -4,7 +4,7 @@ import os
 import base64
 import json
 from typing import Dict, Any, List, Tuple
-
+from google.cloud import bigquery
 from google.oauth2 import service_account
 from app.services.bigquery_client import get_bq_client
 from app.services.storage_client import upload_avatar_to_gcs
@@ -77,21 +77,12 @@ def fetch_user_preference_vector(user_id: str) -> Dict[str, Any]:
         LIMIT 1
     """
 
-    job = client.query(
-        sql,
-        job_config=client.query_job_config_from_api_repr(
-            {
-                "queryParameters": [
-                    {
-                        "name": "user_id",
-                        "parameterType": {"type": "STRING"},
-                        "parameterValue": {"value": user_id},
-                    }
-                ]
-            }
-        ),
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id)
+        ]
     )
-    df = job.to_dataframe()
+    df = client.query(sql, job_config=job_config).to_dataframe()
 
     if df.empty:
         raise ValueError(f"user_preference_vectors: no row for user_id={user_id}")
