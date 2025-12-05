@@ -51,20 +51,13 @@ def get_gcs_client():
 
 
 def upload_avatar_to_gcs(user_id: str, file_bytes: bytes, content_type: str) -> str:
-    """
-    上傳使用者頭像到 GCS，並回傳公開網址。
-    """
     client = get_gcs_client()
     bucket = client.bucket(GCP_BUCKET_NAME)
 
     blob = bucket.blob(f"avatars/{user_id}.png")
     blob.upload_from_string(file_bytes, content_type=content_type)
 
-    # 測試階段，直接設成公開
-    signed_url = blob.generate_signed_url(
-        version="v4",
-        expiration=timedelta(days=7),
-        method="GET",
-    )
+    # 設成公開
+    blob.make_public()
 
-    return signed_url
+    return blob.public_url    # 永久有效，不會過期
