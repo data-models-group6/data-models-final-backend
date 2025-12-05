@@ -148,7 +148,7 @@ def compute_user_vector(user_id):
         "style_vector": (style_acc / total_weight).tolist(),
         "genre_vector": (genre_acc / total_weight).tolist(),
         "language_vector": (lang_acc / total_weight).tolist(),
-        "total_interactions": float(total_weight),
+        "total_interactions": int(round(total_weight)),
         "last_update": datetime.now(timezone.utc).isoformat()
     }
 

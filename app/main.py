@@ -48,7 +48,7 @@ app.include_router(heartbeat_router, prefix="/api", tags=["Heartbeat"])
 # === Redis 配對 API ===
 app.include_router(match_router, prefix="/api", tags=["Matching"])
 
-app.include_router(spotify_test_router, prefix="/api")
+app.include_router(spotify_test_router, prefix="/api", tags=["Test Spotify Sync"])
 
 app.include_router(match_history_router, prefix="/match_history", tags=["MatchHistory"]) 
 
