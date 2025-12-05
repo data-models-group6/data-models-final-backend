@@ -249,9 +249,6 @@ def generate_avatar_bytes(user_id: str) -> bytes:
     images = model.generate_images(
         prompt=prompt,
         number_of_images=1,
-        aspect_ratio="1:1",               # 用比例，不要用 size
-        safety_filter_level="block_some", # 可選，避免太髒的圖
-        person_generation="dont_allow",   # 可選，不生成真人臉
     )
 
     if not images:
