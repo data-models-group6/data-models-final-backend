@@ -164,7 +164,7 @@ def get_user_profile(user_id: str):
 
     data = doc.to_dict() or {}
     return {
-        "name": data.get("name") or data.get("displayName") or "Guest",
+        "name": data.get("name") or data.get("display_name") or "Guest",
         "avatarUrl": data.get("avatarUrl") or "https://example.com/default-avatar.png",
     }
 
