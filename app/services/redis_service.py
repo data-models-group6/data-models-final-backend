@@ -92,6 +92,7 @@ class HeartbeatRedisService:
     def classify_by_music_simple(all_data, my_user_id, my_track_id, my_artist_id):
         same_track = []
         same_artist = []
+        just_near = []
 
         for d in all_data:
             if not d:
@@ -114,9 +115,14 @@ class HeartbeatRedisService:
             if artist == my_artist_id and track != my_track_id:
                 same_artist.append(d)
 
+            if artist != my_artist_id:
+                just_near.append(d)
+
+
         return {
             "same_track": same_track,
-            "same_artist": same_artist
+            "same_artist": same_artist,
+            "just_near": just_near
         }
 
     # --------------------------
