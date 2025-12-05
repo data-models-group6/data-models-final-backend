@@ -247,9 +247,16 @@ def generate_avatar_bytes(user_id: str) -> bytes:
     model = _get_image_model()
 
     images = model.generate_images(
-        prompt=prompt,
-        number_of_images=1,
-    )
+    prompt=prompt,
+    number_of_images=1,
+    safety_settings={
+        "HARASSMENT": "BLOCK_SOME",
+        "HATE_SPEECH": "BLOCK_SOME",
+        "DANGEROUS_CONTENT": "BLOCK_SOME",
+        "SEXUAL_CONTENT": "BLOCK_SOME",
+        "VIOLENCE": "BLOCK_SOME",
+    }
+)
 
     if not images:
         raise Exception("Vertex AI did not return any image")
