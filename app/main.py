@@ -11,6 +11,7 @@ from app.api.heartbeat import router as heartbeat_router
 from app.api.match_api import router as match_router          # Redis Matching
 from app.api.spotify_test_api import router as spotify_test_router
 from app.api.match_history import router as match_history_router
+from app.api.avatar_api import router as avatar_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -54,6 +55,8 @@ app.include_router(match_router, prefix="/api", tags=["Matching"])
 app.include_router(spotify_test_router, prefix="/api", tags=["Test Spotify Sync"])
 
 app.include_router(match_history_router, prefix="/match_history", tags=["MatchHistory"]) 
+
+app.include_router(avatar_router, prefix="/api", tags=["Avatar"])
 
 @app.get("/")
 def root():
