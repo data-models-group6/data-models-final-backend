@@ -1,3 +1,6 @@
+from app.config.gcp_credentials import setup_google_credentials
+setup_google_credentials()
+
 # app/main.py
 from fastapi import FastAPI
 
