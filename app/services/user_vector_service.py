@@ -218,6 +218,9 @@ def save_user_vector(vector_data):
     genre_vec = ",".join([str(v) for v in vector_data["genre_vector"]])
     lang_vec = ",".join([str(v) for v in vector_data["language_vector"]])
 
+    # total_interactions：轉成 INT，避免型別衝突
+    total_interactions_int = int(round(float(vector_data["total_interactions"])))
+
     sql = f"""
     MERGE `{table}` T
     USING (
@@ -226,7 +229,7 @@ def save_user_vector(vector_data):
             ARRAY[{style_vec}] AS style_vector,
             ARRAY[{genre_vec}] AS genre_vector,
             ARRAY[{lang_vec}] AS language_vector,
-            {float(vector_data["total_interactions"])} AS total_interactions,
+            {total_interactions_int} AS total_interactions,
             TIMESTAMP('{vector_data["last_update"]}') AS last_update
     ) S
     ON T.user_id = S.user_id
