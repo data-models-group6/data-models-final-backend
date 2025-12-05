@@ -5,7 +5,7 @@ from google.cloud import bigquery
 from app.services.bigquery_client import get_bq_client
 from app.services.firestore_client import get_db
 from app.services.user_vector_service import safe_array
-from app.services.match_utils import cosine_sim, similarity_score, build_similarity_reason
+from app.services.match_utils import similarity_score, build_similarity_reason
 
 
 # ======================================================
