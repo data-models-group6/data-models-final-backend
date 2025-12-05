@@ -6,6 +6,7 @@ import json
 from google.cloud import storage
 from google.oauth2 import service_account
 from app.config.settings import GCP_BUCKET_NAME
+from datetime import timedelta
 
 _cached_gcs_client = None
 
@@ -60,6 +61,10 @@ def upload_avatar_to_gcs(user_id: str, file_bytes: bytes, content_type: str) -> 
     blob.upload_from_string(file_bytes, content_type=content_type)
 
     # 測試階段，直接設成公開
-    blob.make_public()
+    signed_url = blob.generate_signed_url(
+        version="v4",
+        expiration=timedelta(days=365),
+        method="GET",
+    )
 
-    return blob.public_url
+    return signed_url
