@@ -86,5 +86,6 @@ async def heartbeat_auto(payload: dict, user=Depends(get_current_user)):
         "status": "ok",
         "sent": heartbeat,
         "same_track": groups["same_track"],
-        "same_artist": groups["same_artist"]
+        "same_artist": groups["same_artist"],
+        "just_near": groups["just_near"]
     }
