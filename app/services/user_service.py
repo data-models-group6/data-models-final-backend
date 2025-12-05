@@ -20,6 +20,7 @@ def create_user(data: dict):
         "last_name": data["last_name"],
         "birthday": data["birthday"],
         "gender": data.get("gender"),
+        "avatarUrl": ""
     }
     db = get_db()
     db.collection("users").document(user_id).set(data)

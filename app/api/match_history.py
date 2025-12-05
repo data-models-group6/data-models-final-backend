@@ -95,10 +95,10 @@ def get_match_candidates(user_id: str, top_k: int = 10):
             "similarity_info": {
                 "score": score,
                 "reason": reason["reason"],
-                "reason_label": reason["reason_label"],
-                "shared_top_artists": shared_artists,
-                "shared_top_tracks": shared_tracks,
-                "top_10_songs": top_songs
+                "reason_label": reason["reason_label"],  # list OK
+                "shared_top_artists": shared_artists,    # list[str] OK
+                "shared_top_tracks": shared_tracks,      # list[str] OK
+                "top_10_songs": top_songs                # list[dict(title, artist, album_image)] OK
             }
         })
 
