@@ -1,6 +1,7 @@
 # app/services/match_utils.py
 
 import numpy as np
+import geohash2
 from google.cloud import bigquery
 from app.services.bigquery_client import get_bq_client
 from app.services.firestore_client import get_db
@@ -191,3 +192,11 @@ def get_user_top_songs(user_id: str, limit: int = 10):
         }
         for _, row in df.iterrows()
     ]
+
+# 這是您後端（例如 app/services/match_utils.py）中需要的邏輯
+def get_ranking_region(lat: float, lng: float) -> str:
+    """
+    將用戶的經緯度轉換為用於排行榜篩選的 Geohash 前綴 (精度 5)。
+    """
+    # 這裡的 lat/lng 會由呼叫端傳入，所以不用在這裡定義 user_lat
+    return geohash2.encode(lat, lng, precision=5)

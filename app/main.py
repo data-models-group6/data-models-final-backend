@@ -13,6 +13,7 @@ from app.api.spotify_test_api import router as spotify_test_router
 from app.api.match_history import router as match_history_router
 from app.api.avatar_api import router as avatar_router
 from app.api.match_chat import router as match_chat_router
+from app.api.ranking_router import router as ranking_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -60,6 +61,8 @@ app.include_router(match_history_router, prefix="/match_history", tags=["MatchHi
 app.include_router(avatar_router, prefix="/api", tags=["Avatar"])
 
 app.include_router(match_chat_router, prefix = "/api",tags = ["Chat"])
+
+app.include_router(ranking_router, prefix="/api", tags=["Ranking"])
 
 @app.get("/")
 def root():

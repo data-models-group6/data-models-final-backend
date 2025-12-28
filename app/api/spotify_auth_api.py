@@ -18,6 +18,14 @@ from app.services.spotify_pkce_service import (
     save_code_verifier,
     get_and_delete_code_verifier,
 )
+from app.services.spotify_history import sync_recently_played
+from pydantic import BaseModel
+from typing import Optional
+
+class SyncHistoryRequest(BaseModel):
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
 router = APIRouter()
 
 
@@ -52,6 +60,7 @@ def login(user=Depends(get_current_user)):
     # 4. 定義需要的 scope
     scope = (
         "user-read-currently-playing "
+        "user-read-recently-played "
         "user-top-read "
         "user-library-read "
         "playlist-read-private "
@@ -126,3 +135,21 @@ def callback(
 
     # 7. 授權完成後 redirect 回前端的某個頁面（之後你可以改成設定檔）
     return RedirectResponse(url="https://data-models-final-frontend.onrender.com/authorization/location")
+
+
+@router.post("/sync-recent")
+def sync_recent_history(
+    payload: SyncHistoryRequest,
+    user=Depends(get_current_user)
+):
+    """
+    手動觸發同步：抓取 Spotify 最近播放紀錄 (Recently Played) 並寫入 BigQuery。
+    通常在 App 啟動或剛登入時呼叫，用來補齊未開啟 App 時的聽歌紀錄。
+    """
+    user_id = user["user_id"]
+    result = sync_recently_played(user_id, payload.lat, payload.lng)
+    
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result["message"])
+        
+    return result
