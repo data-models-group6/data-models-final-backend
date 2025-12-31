@@ -1,7 +1,7 @@
 後端啟動步驟 (Python / FastAPI)
 
-# 1. 
-Clone repository URL
+# 1. Clone repository URL
+https://github.com/data-models-group6/data-models-final-backend.git
 
 # 2.建立名為 venv 的虛擬環境
 python -m venv venv
